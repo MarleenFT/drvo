@@ -3,6 +3,8 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+
 MODULE_VERSION("1");
 MODULE_DESCRIPTION("Test module");
 MODULE_AUTHOR("You");
@@ -19,8 +21,8 @@ static int      drvo_release(struct inode*, struct file*);
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-struct cdev drvo_cdev;
-dev_t       dev = 0;
+struct cdev* drvo_cdev;
+dev_t       drvo_dev = 0;
 
 struct file_operations drvo_file_ops = {
     .owner      = THIS_MODULE,
@@ -35,9 +37,13 @@ struct file_operations drvo_file_ops = {
 static int drvo_init(void)
 {
     printk(KERN_ALERT "Initialization process\n");
-    
+
+    alloc_chrdev_region(&drvo_dev, 0, 1, "drvo_dev");
+
     cdev_init(&drvo_cdev, &drvo_file_ops);
-    cdev_add(&drvo_cdev, dev, 1);
+    cdev_add(&drvo_cdev, drvo_dev, 1);
+
+    printk(KERN_ALERT "Dev: %d, %d \n", MAJOR(drvo_cdev->dev), drvo_cdev->count);
 
     return 0;
 }
@@ -45,7 +51,7 @@ static int drvo_init(void)
 static void drvo_exit(void)
 {
     printk(KERN_ALERT "Exiting\n");
-    cdev_del(&drvo_cdev);
+    cdev_del(drvo_cdev);
 }
 
 static ssize_t drvo_read(struct file* pf, char* buf, size_t size, loff_t* lof) {
@@ -72,3 +78,5 @@ static int drvo_release(struct inode* iNode, struct file* fp) {
 
 module_init(drvo_init);
 module_exit(drvo_exit);
+
+/////////////////////////////////////////////////////////////////////////////////////////////
