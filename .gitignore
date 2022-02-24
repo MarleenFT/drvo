@@ -4,6 +4,5 @@
 *.vscode
 *.symvers
 *.ko
-*.c
 *.o
 *.order
