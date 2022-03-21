@@ -38,13 +38,13 @@ static int drvo_release(struct inode *, struct file *);
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-static struct cdev *drvo_cdev = NULL;
-static dev_t drvo_first_dev = 0;
-static int drvo_major_number = 0;
-static struct class *drvo_class = NULL;
-static struct device *drvo_device = NULL;
+static struct cdev       drvo_cdev;
+              dev_t      drvo_first_dev = 0;
+static        int        drvo_major_number = 0;
+static struct class     *drvo_class = NULL;
+static struct device    *drvo_device = NULL;
 
-static struct file *drvo_file = NULL;
+static struct file      *drvo_file = NULL;
 
 struct file_operations drvo_file_ops = {
     .owner = THIS_MODULE,
@@ -82,16 +82,17 @@ static int drvo_init(void)
     alloc_chrdev_region(&drvo_first_dev, var_base_minor, var_minor_amount, "drvo_practica");
     drvo_major_number = MAJOR(drvo_first_dev);
 
-    drvo_cdev = cdev_alloc();
-    drvo_cdev->ops = &drvo_file_ops;
-    cdev_add(drvo_cdev, drvo_first_dev, var_minor_amount);
+    // drvo_cdev = cdev_alloc();
+    // drvo_cdev->ops = &drvo_file_ops;
+    cdev_init(&drvo_cdev, &drvo_file_ops); 
+    cdev_add(&drvo_cdev, drvo_first_dev, var_minor_amount);
 
-    printk(KERN_INFO "Registered %d device(s) on major number: %d \n", drvo_cdev->count, drvo_major_number);
+    printk(KERN_INFO "Registered %d device(s) on major number: %d \n", drvo_cdev.count, drvo_major_number);
 
     drvo_class = class_create(THIS_MODULE, "drvo_class");
     if (IS_ERR(drvo_class))
     {
-        cdev_del(drvo_cdev);
+        cdev_del(&drvo_cdev);
         unregister_chrdev_region(drvo_first_dev, var_minor_amount);
         printk(KERN_ALERT "Could not create class, exiting!\n");
         return PTR_ERR(drvo_class);
@@ -103,11 +104,13 @@ static int drvo_init(void)
     if (IS_ERR(drvo_device))
     {
         class_destroy(drvo_class);
-        cdev_del(drvo_cdev);
+        cdev_del(&drvo_cdev);
         unregister_chrdev_region(drvo_first_dev, var_minor_amount);
         printk(KERN_ALERT "Could not create device, exiting!\n");
         return PTR_ERR(drvo_device);
     }
+
+
 
     printk(KERN_INFO "Driver successfully initiated.\n");
 
@@ -118,7 +121,7 @@ static void drvo_exit(void)
 {
     device_destroy(drvo_class, drvo_first_dev);
     class_destroy(drvo_class);
-    cdev_del(drvo_cdev);
+    cdev_del(&drvo_cdev);
     unregister_chrdev_region(drvo_first_dev, var_minor_amount);
 
     printk(KERN_WARNING "Driver shutting down\n");
@@ -130,7 +133,7 @@ static ssize_t drvo_read(struct file *pf, char __user *buf, size_t size, loff_t 
 {
     int result = 0;
 
-    printk(KERN_INFO "Reading from drvo initiated\n");
+    printk(KERN_INFO "Reading from drvo initiated, %ld, %lld\n", size, *lof);
 
     if (*lof > DRVO_MAX_BUFFER_SIZE)
     {
@@ -161,7 +164,7 @@ static ssize_t drvo_write(struct file *pf, const char __user *buf, size_t size, 
     int result = 0;
     int bytes_written = size;
 
-    printk(KERN_INFO "Writing to drvo initiated\n");
+    printk(KERN_INFO "Writing to drvo initiated, %ld, %lld\n", size, *lof);
 
     if (*lof + bytes_written > DRVO_MAX_BUFFER_SIZE)
     {
@@ -177,16 +180,15 @@ static ssize_t drvo_write(struct file *pf, const char __user *buf, size_t size, 
 
     *lof += bytes_written;
 
-    printk(KERN_INFO "Written %d bytes of data\n", bytes_written);
+    printk(KERN_INFO "Written %d, %lld bytes of data\n", bytes_written, *lof);
 
     return bytes_written;
 }
 
 static int drvo_open(struct inode *iNode, struct file *fp)
 {
-    drvo_open_counter++;
     printk(KERN_INFO "Driver opening initiated\n");
-    printk(KERN_INFO "Open counter: %d\n", drvo_open_counter);
+    printk(KERN_INFO "Open counter: %d\n", ++drvo_open_counter);
     return 0;
 }
 
