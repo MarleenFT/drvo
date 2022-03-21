@@ -6,3 +6,4 @@
 *.ko
 *.o
 *.order
+*.mod.c
